@@ -1,0 +1,186 @@
+{
+  "name": "Gmail AI Spam Detector Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "1c791832-4719-4305-96fa-865aded7b398",
+      "name": "Gmail Trigger (Unread Mails)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        -64
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "X20x702dNIXIQQ8v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following email. Determine if it is a promotional advertisement, sales deal, discount pitch, or automated marketing newsletter (especially from platforms like Amazon, Flipkart, Myntra, Ajio, etc.). Personal transactional emails (like invoice receipts, delivery updates, order tracking, OTPs) are NOT spam.\n\nEmail Details:\nFrom: {{ $json.from }}\nSubject: {{ $json.subject }}\nSnippet: {{ $json.snippet }}",
+        "options": {}
+      },
+      "id": "748f7356-ecb3-460d-88d0-373dfdf4c206",
+      "name": "AI Classifier Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -432,
+        -64
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e713c60d-8231-4a9b-9536-61ba3717f5a7",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -336,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.output.isSpam }}",
+              "value2": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9272754c-ec91-4f10-8d92-0866fe1ab7f4",
+      "name": "Is Promotional Spam?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger (Unread Mails)').item.json.id }}",
+        "labelIds": [
+          "SPAM"
+        ]
+      },
+      "id": "864afe87-121e-46c6-a42b-f08a7b9b8ae1",
+      "name": "Move to Spam",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        112,
+        -80
+      ],
+      "webhookId": "f7710573-0c9b-4d8f-86b0-bed220e0e0bc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "X20x702dNIXIQQ8v",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        144
+      ],
+      "id": "10d24ec6-517b-44d3-ae60-b9195038b852",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DNGkhaZpZui4kdm2",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger (Unread Mails)": {
+      "main": [
+        [
+          {
+            "node": "AI Classifier Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Classifier Agent": {
+      "main": [
+        [
+          {
+            "node": "Is Promotional Spam?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Promotional Spam?": {
+      "main": [
+        [
+          {
+            "node": "Move to Spam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Classifier Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "272215f1-b2dc-4b08-8fac-8c545eef5356",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "eab7786142a2167c1fd49cfe0705d7f44ad8357539762a133547d929d6815ce8"
+  },
+  "id": "ikD4MLZVc415Yilg",
+  "tags": []
+}
